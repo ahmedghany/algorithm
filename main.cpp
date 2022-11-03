@@ -1,133 +1,195 @@
-/*Name: Ahmed Abdel Ghany, NSHE ID: 2001445844, CS302 Assignment 8,
- *Description: decide which land should land first using proiority queue 
- *Input: file
- *Output: rocket id, velocity, fuel, altitude */
+/*Name: Ahmed Abdel Ghany, NSHE ID: 2001445844, CS302 Assignment 2,
+ *Description:  implement a game board in which the sudoku game can be played
+ *Input: file name
+ *Output: the sudoku game*/
 
 
-/*Algorithm: build up the priorityQ class to decide which land,
-* would have the advantage to be the first one, using land class,
-* to simulate landers velocity, fuel_amount and altitude, then we
-* implement both class headers in main here, and prompt the user,
-to enter the files and we store the data from the files, and then,
-*output we output velocity, id, fuel, altitude for each rocket.*/
+/*Algorithm: reading the file name and check it is right, then finding the,
+* empty space in the printed numbers from the file, using different functions,
+* to check each cell in the sector, and go back to the previous cell if an,
+* error is found in the cell after it*/
 
-
-#include <iomanip>
 #include <iostream>
+#include <unistd.h>
+#include <cmath>
+#include <cstdlib>
+#include <string> 
+#include <iomanip>
 #include <fstream>
-#include <string>
-#include <vector>
-#include "priorityQ.h"
-#include "lander.h"
-using namespace std;
 
-int main(){
-    
-    ifstream infile, infile2;
-    string file;
-    double mass, max_thrust, max_fuel, alt, fuel;
-    int id;
-    double flow;
-    lander land;
-    priorityQ <lander> queue;
-    
-    cout<<endl;
+using namespace std; 
 
-    //get the file name
-    while(true){
-
-        cout <<"Enter lander file: ";
-        cin>>file;
-        
-        infile.open(file);
-        
-        if (infile.is_open())
-            break;
-    }
-    
-    while(true){
-        
-        //store data
-        infile>>mass>>max_thrust>>max_fuel>>alt>>fuel>>id;
-        
-        if ( infile.eof())
-            break;
-    
-        land = lander ( mass, max_thrust, max_fuel, alt, fuel, id);
-
-        queue.insert(land);
-    }
-    cout<<endl;
-    while(true){
-
-        cout <<"Enter simulation file: ";
-        cin>>file;
-        
-        infile2.open(file);
-        
-        if (infile2.is_open())
-            break;
-    }
-
-    while(true){
-        
-        //get data
-        getline(infile2, file);
-        
-        if ( infile2.eof())
-            break;
-        //convert from string to double
-        try{
-            flow = stod(file);
-        }
-        
-        catch(invalid_argument e){
-            continue;
-        }
-        land=queue.getHighestPriority();
+const int blank = 0;
  
-        //check the flow rate to output
-        if (!land.change_flow_rate( flow))
-            continue;
-        
+/*function_identifier: check if we have the same number in each sector
+*paarmeters: board[][], num, r, c
+*return value: true, false */
+bool sameNumInSector( int board[9][9], int r, int c, int num){
+
+    int rowBox = r - r % 3;
+    int colBox = c - c % 3;
+
+    for (int i= rowBox; i< rowBox +3; i++)
+        for (int j= colBox; j< colBox +3; j++)
+            if (board[i][j] == num)
+                return true;
+           
+    return false;
+
+}
+
+ 
+/*function_identifier: check if we have the same number in thr row
+ * *paarmeters: board[][], num, r
+*return value: true, false */
+bool sameNumInRow( int board[9][9], int r, int num){
+
+    for (int c=0; c<9; c++)
+        if (board[r][c] == num)
+            return true;
+
+    return false;
+}
+ 
+/*function_identifier: check if we have the same number in thr colomn
+*paarmeters: board[][], num, c
+*return value: true, false */
+bool sameNumInCol( int board[9][9], int c, int num){
+
+    for (int r=0; r<9; r++)
+        if (board[r][c] == num)
+            return true;
+
+    return false;
+}
+ 
+ 
+/*function_identifier: check if we have a vaild num
+ * *paarmeters:c, num, r
+*return value: true, false */
+bool valid(int board[9][9], int r, int c, int num){
+
+    return !sameNumInRow(board, r, num) && !sameNumInCol(board, c, num)
+        && !sameNumInSector(board, r, c, num);
+}
+
+ 
+/*function_identifier: check if it is blank
+ *paarmeters: board[][]
+*return value: true, false */
+bool isBlank( int board[9][9]){
+
+    for (int i =0; i< 9; i++)
+        for (int j =0; j < 9; j++)
+            if ( board[i][j] == blank)
+                return true;
+
+    return false;
+
+}
+
+ 
+/*function_identifier: check if it is blank
+ *paarmeters: board[][], c, r
+*return value: true, false */
+bool sudoku( int board[9][9], int r, int c){
+
+
+    if ( r == 9)
+        return true;
+
+    if (board[r][c] != blank)
+        return sudoku(board, r+(c == 8), (c+1) %9);
+
+    for (int num =1; num <=9; num++)
+        if (valid( board, r, c, num)){
+            
+            board[r][c] = num;
+            if (sudoku(board, r+(c==8), (c+1) %9))
+                return true;
+        }
+          
+    board[r][c] = blank;
+            
+    return false;
        
-        queue.deleteHighestPriority();
+}
 
-        cout<<endl;    
-        cout<<"Rocket "<<land.get_id()<<endl;
-        cout<<"Fuel: "<<land.get_fuel_amount()<<endl;
-        cout<<"Altitude: "<<land.get_altitude()<<endl;
-        cout<<"Velocity: "<<land.get_velocity()<<endl;
+ 
+/*function_identifier: print the sudoku game board
+ *paarmeters: board
+*return value: none */
+void printSudoku(int board[9][9]){
 
-        land.simulate();
-        //check satus for crashed
-        if ( land.get_status() == 'c'){
-            cout<<endl<<"Rocket ID: "<<land.get_id()<<" has crashed :( At least nobody was on board"<<endl;
-            continue;
+    for ( int r=0; r <9; r++){
+        if ( r %3 == 0)
+            cout << "-------------------------------"<<endl;
+
+        for (int c=0; c<9; c++){
+            if ( c%3 == 0)
+                cout<<"|";
+            cout<<" "<< char (board[r][c] == blank? '-' : board[r][c]+'0')<<" "; 
+
         }
-        //check status for landed
-        if ( land.get_status() == 'l'){
-            cout<<endl<<"Rocket ID: "<<land.get_id()<<" has successfully landed and all astronauts are accounted for :)"<<endl;
-            continue;
-        }
-        queue.insert(land);
+        cout <<"|"<<endl;
     }
-    cout<<endl<<endl;
-    //if we don't have any elementsin the queue
-    if (!queue.isEmpty())
-        cout<<"There are landers still trying to land..."<<endl;
+
+    cout << "-------------------------------"<<endl;
+}
+
+
+int main() {
+	
+
+    //itialize variables
+	ifstream fileName;
+	string file;
+   
+    int board[9][9];
     
-    //output landers who still landing
-    while (queue.getSize() > 0){
+
+    while(true){
+        cout<<endl;
+        //open the file
+        while (true){
+            
+            cout << "Enter initial sudoku board file: ";
+            cin >> file;
+            
+            if ( file == "NO"){
+                cout<<endl;
+                return 0;
+            }
+
+            fileName.open(file);
+
+            if (fileName.is_open())
+                break;
+        }
         
-        land=queue.getHighestPriority();
-        queue.deleteHighestPriority();
+        cout <<endl<< "Initial board read in"<<endl<<endl;
+        // getting number
+        for (int r=0; r<9; r++)
+            for (int c=0; c<9; c++)
+                
+                fileName >> board[r][c];
+                
 
-        cout<<"Lander ID: "<<land.get_id()<<" Altitude: "<<land.get_altitude()<<" mission aborted."<<endl;
+        printSudoku(board);        
+    
+        // close file     
+        fileName.close();
+
+        cout<<endl;
+
+        
+        if (sudoku(board, 0, 0)){
+            cout <<endl<< "Sudoku puzzled solved"<<endl<<endl;
+            printSudoku(board);
+        }
+        else
+            cout <<endl<<"No solution"<<endl<<endl;
 
     }
-    
-    infile.close();
-    infile2.close();
     return 0;
 }
