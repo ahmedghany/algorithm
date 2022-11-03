@@ -1,122 +1,133 @@
-/*Name: Ahmed Abdel Ghany, NSHE ID: 2001445844, Cs 302 Assignment 9
- *description:  
- *Input: file name
- *Output: all paths from start to final destination*/
+/*Name: Ahmed Abdel Ghany, NSHE ID: 2001445844, CS302 Assignment 8,
+ *Description: decide which land should land first using proiority queue 
+ *Input: file
+ *Output: rocket id, velocity, fuel, altitude */
 
 
-/*Algorithm: reading thr file that has street names,
-  using hasg map toconstruct adjacency list, stack to decide,
-  the order of the streets, function gat paths decide hom many,
-  pathes and if there is a path or no using graph and nodesinpaths*/
+/*Algorithm: build up the priorityQ class to decide which land,
+* would have the advantage to be the first one, using land class,
+* to simulate landers velocity, fuel_amount and altitude, then we
+* implement both class headers in main here, and prompt the user,
+to enter the files and we store the data from the files, and then,
+*output we output velocity, id, fuel, altitude for each rocket.*/
 
-#include <iostream>
-#include <unistd.h>
-#include <cmath>
-#include <cstdlib>
-#include <string> 
-#include "hashMap.h"
-#include "adjacency.h"
-#include "myStack.h"
+
 #include <iomanip>
+#include <iostream>
 #include <fstream>
-
-bool getPaths ( string current , string finalDestination ,
-	hashMap < string , vertex <string > > graph ,
-	hashMap <string , bool >& nodesInPath ,
-	myStack <string >& recStack , int& pathNo );
+#include <string>
+#include <vector>
+#include "priorityQ.h"
+#include "lander.h"
+using namespace std;
 
 int main(){
-
-
-	fstream infile;
-    string file, start, end, street1, street2;
+    
+    ifstream infile, infile2;
+    string file;
+    double mass, max_thrust, max_fuel, alt, fuel;
+    int id;
+    double flow;
+    lander land;
+    priorityQ <lander> queue;
     
     cout<<endl;
+
+    //get the file name
     while(true){
+
+        cout <<"Enter lander file: ";
+        cin>>file;
         
-        cout << "Last one ): ";
-        cin>> file;
-
         infile.open(file);
-
+        
         if (infile.is_open())
             break;
-    } 
-
-    infile>> start>>end;
-
-    cout<<endl;
-    hashMap<string, vertex<string> > adjList;
+    }
     
     while(true){
-
-        infile>>street1>>street2;
-
-        if (infile.eof())
+        
+        //store data
+        infile>>mass>>max_thrust>>max_fuel>>alt>>fuel>>id;
+        
+        if ( infile.eof())
             break;
+    
+        land = lander ( mass, max_thrust, max_fuel, alt, fuel, id);
 
-        adjList[street1].addEdge(street2);
+        queue.insert(land);
     }
-
- 	infile.close();   
-    hashMap<string, bool> nodesPaths;
-    myStack <string> rec;
-    int num = 0;
-    
-    getPaths(start, end, adjList, nodesPaths, rec, num);
-    
     cout<<endl;
-	return 0;
-}
+    while(true){
 
-bool getPaths ( string current , string finalDestination ,
-hashMap < string , vertex <string > > graph ,
-hashMap <string , bool >& nodesInPath ,
-myStack <string >& recStack , int& pathNo ){
-
-    if ( current == finalDestination){
+        cout <<"Enter simulation file: ";
+        cin>>file;
         
-        pathNo++;
-        cout << "Path " << pathNo<< " : ";
-
-        myStack <string> stack1 (recStack);
-        myStack <string> stack2;
-
-        while(!stack1.isEmpty()){
-
-            stack2.push(stack1.top());
-            stack1.pop();
-        }
+        infile2.open(file);
         
-        // print paths found
-        while(!stack2.isEmpty()){
-
-            cout<< stack2.top() << " <=> ";
-            stack2.pop();
-        }
-        cout<< finalDestination<<endl;
-        return true;
+        if (infile2.is_open())
+            break;
     }
-    
-    nodesInPath [current] = true;
-    recStack.push(current);
-    
-    for ( string v : graph[current]){
+
+    while(true){
         
-        if (nodesInPath[v] == true)
+        //get data
+        getline(infile2, file);
+        
+        if ( infile2.eof())
+            break;
+        //convert from string to double
+        try{
+            flow = stod(file);
+        }
+        
+        catch(invalid_argument e){
+            continue;
+        }
+        land=queue.getHighestPriority();
+ 
+        //check the flow rate to output
+        if (!land.change_flow_rate( flow))
             continue;
         
-        for ( string v2 : graph[v])
-            if ( v2 == current)
-                goto label;
-        
-        continue;
+       
+        queue.deleteHighestPriority();
 
-    label:
-        getPaths(v, finalDestination, graph, nodesInPath, recStack, pathNo);
-    
+        cout<<endl;    
+        cout<<"Rocket "<<land.get_id()<<endl;
+        cout<<"Fuel: "<<land.get_fuel_amount()<<endl;
+        cout<<"Altitude: "<<land.get_altitude()<<endl;
+        cout<<"Velocity: "<<land.get_velocity()<<endl;
+
+        land.simulate();
+        //check satus for crashed
+        if ( land.get_status() == 'c'){
+            cout<<endl<<"Rocket ID: "<<land.get_id()<<" has crashed :( At least nobody was on board"<<endl;
+            continue;
+        }
+        //check status for landed
+        if ( land.get_status() == 'l'){
+            cout<<endl<<"Rocket ID: "<<land.get_id()<<" has successfully landed and all astronauts are accounted for :)"<<endl;
+            continue;
+        }
+        queue.insert(land);
     }
-    recStack.pop();
-    nodesInPath[current] = false;
-    return pathNo > 0;
+    cout<<endl<<endl;
+    //if we don't have any elementsin the queue
+    if (!queue.isEmpty())
+        cout<<"There are landers still trying to land..."<<endl;
+    
+    //output landers who still landing
+    while (queue.getSize() > 0){
+        
+        land=queue.getHighestPriority();
+        queue.deleteHighestPriority();
+
+        cout<<"Lander ID: "<<land.get_id()<<" Altitude: "<<land.get_altitude()<<" mission aborted."<<endl;
+
+    }
+    
+    infile.close();
+    infile2.close();
+    return 0;
 }
